@@ -1,0 +1,45 @@
+引入自定义popover框架的方法:
+1.将WEpopover项目拖进HDBI项目，则在自己的类中import WEPopoverController不会报错，编译时会报Undefined symbols for architecture i386:
+  "_OBJC_CLASS_$_WEPopoverController", referenced from:
+      objc-class-ref in HDS_S_ShipIOPortPlan.o。这是因为WEPopoverController虽然在项目中可以找到，但不会被编译。
+2.在User.zhangyi.Library.Developer.Xcode.DerivedData中有build的数据和类库，可以看到WEPopover现在是以app的形式存在的。而其他类库是以lib.a的形式存在。lib.a的库在HDBI的link binary with libraries中已经被设置过，所以可以作为寻找路径。在lbwl中只能设置lib.a或.framework的类库。 
+    [*sbjson通过lib.a的形式引入可以，通过.framework的形式引入则提示无法找到SBJSON/SBJOSN，是因为framework是供MacOSX使用的。］
+    [*另外chart和grid都需要在Head Search Paths中定义头文件的查找路径才行，但sbjon不需要，经查看build目录是因为已经在include下面有SBJSON的头文件，原因是在sbjon项目中已经定义public headers folder path]
+3.将HDBI中的headers search path 和user headers search path清除，然后将GMGrid和CorePlot的target中的public /private headers folder path 都设置成/include/XXX的路径，这样在最后build生成的项目中会有include/XXX文件夹里面包括所有的头文件。同时，项目中代码引用的方式也要改变，以前是直接#import "CocoaTouch.h"，现在需要用<XXX/CocoaTouch.h>。引号和尖括号等效，如果不想要前面的XXX/,可以在headers folder path中直接设置成/include。
+
+========================================================================
+总结：iphone静态库的创建和调用
+
+论坛上有很多版本的关于iphone静态库的问题，通过自身实践，对基本方法做一些总结。
+环境：Xcode 4.2.1  iso SDK 5.0
+主工程targets：
+Architectures:Standard (armv7)
+Base SDK:Lastest iOS(iOS 5.0)
+Supported Platforms:iphonesimulator iphoneos
+Valid Architectures:armv6 armv7
+
+静态库工程targets:
+Architectures:Standard (armv7)
+Base SDK:iphoneosimulator$(SDK_VERSION) (-->如果不是这个，要手动修改，不然会出现architecture无效错误）
+Supported Platforms:iphonesimulator iphoneos
+Valid Architectures:armv6 armv7
+
+一：静态库的创建
+S1: 选择cocoa Touch Static Library模版，新建工程。
+S2：添加你的类，或者利用项目自动生成的类处理你的逻辑。
+S3:  选中你要对外开放的头文件，将Target Membership中设置为public。
+
+S4: 设置安装路径，在你的工程设置里面，找到testlib构建目标，在Build Settings中找到"Installation Directory"一项（可设置的项非常多，建议在搜索框中输入install来快速查找定位），填上“$(BUILT_PRODUCTS_DIR)”，将Skip Install设置为Yes。
+     注：$(BUILT_PRODUCTS_DIR)这个环境变量对应的path很深，而且mac对用户隐藏这个path，除非在终端查看。不用管他，最后生成.a成功后，便可通过xcode直接查看，参考S6。
+S5: 设置公开头文件的路径，选择target里的Build Settings，找到Public Headers Folder Path一项，设置为：$(TARGET_NAME)
+S6：可以执行Build操作了，如果一切顺利，会在Products中看到XXX.a由红变黑了，表示这个文件生成了，点击这个文件可以看到详细信息，如果看不到，就说明哪个设置还是有问题的。
+注：成功后，选中xxx.a文件，在右侧的Identity and Type里看到Full Path，最有有个“箭头”标记，点击，便可打开xxx.a文件path。
+
+二：使用静态库
+S1：创建主工程，设置依赖关系，在你的工程build phases中，将xxx.a加到link Binary With Libararies中。
+注：可以把你的xxx.a文件拷贝到你的住工程目录下，这样方便查找，link Binary With Libararies中点到“+”，选择“Add other”,把xxx.a加入。
+S2:   添加静态库的头文件搜索路径，先在Build Settings中，将User Header Search Paths设置为“$(BUILT_PRODUCTS_DIR)”。
+然后双击那个显示“<Multiple values>”的地方，弹出一个对话框，把Recursive勾上。
+S3:  设置Scheme.勾上那个Archive选项。
+S4：在需要用到的静态库的文件中添加：#import "xxx.h"，这是静态库文件所开放的头文件。 然后实例化静态库类，调用其方法来进行逻辑处理。
+======================================================================

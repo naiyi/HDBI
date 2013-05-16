@@ -1,0 +1,44 @@
+1.首先找到编译器：
+
+sudo find /Applications/Xcode.app -name *llvm-gcc*
+
+/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/arm-apple-darwin10-llvm-gcc-4.2
+
+2.找到SDK：
+
+sudo find /Applications/Xcode.app -name SDKs
+
+/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs
+
+3.来个经典Hello world ：
+
+#include <stdio.h>                                                                                             
+int main(){  
+       printf("Hello world !!!\n");  
+       return 0;  
+}  
+
+4.编译
+
+/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/arm-apple-darwin10-llvm-gcc-4.2 -o helloworld helloworld.c -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.1.sdk
+
+5.校验
+
+file helloworld
+
+6.SCP给iPhone、iPad
+前提是，设备已经越狱并且安装了SSH,且必须在同一网段。
+=============================================================================
+安装ssh: cydia-》分类-》networking-》openssh-》用户名root 密码alpine
+修改密码：通过ssh登陆到iPad，ssh root@10.18.13.233,输入passwd，再输入passwd mobile
+=============================================================================
+$scp helloworld root@x.x.x.x:hw
+
+7.登录设备签名
+$ssh -l root x.x.x.x
+#ldid -S helloworld // 我没执行这一步也可以
+
+8.执行程序
+#./helloworld
+Hello world !!!
+
